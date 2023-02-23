@@ -43,10 +43,35 @@ test "encode" {
     defer _ = c.iconv_close(cd);
     var input = "こんにちは";
     var slice: []const u8 = input[0..];
-    const shift_jis = try encode(allocator, cd, &slice);
-    defer allocator.free(shift_jis);
+    const sjis = try encode(allocator, cd, &slice);
+    defer allocator.free(sjis);
 
     const file = try std.fs.cwd().createFile("sjis.txt", .{});
     defer file.close();
-    try file.writeAll(shift_jis);
+    try file.writeAll(sjis);
+}
+
+test "encode2" {
+    const allocator = std.testing.allocator;
+
+    const cd = c.iconv_open("SHIFT-JIS", "UTF-8");
+    defer _ = c.iconv_close(cd);
+
+    const file2 = try std.fs.cwd().createFile("sjis2.txt", .{});
+    defer file2.close();
+
+    const input = "こんにちは";
+    var iter = (try std.unicode.Utf8View.init(input)).iterator();
+    while (iter.nextCodepoint()) |cp| {
+        std.debug.print("0x{x} is {u}\n", .{cp, cp});
+
+        var buf: [4]u8 = undefined;
+        var s = try std.fmt.bufPrintZ(&buf, "{u}", .{cp});
+
+        var slice: []const u8 = s[0..];
+        const sjis = try encode(allocator, cd, &slice);
+        defer allocator.free(sjis);
+
+        try file2.writeAll(sjis);
+    }
 }

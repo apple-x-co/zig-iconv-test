@@ -28,8 +28,8 @@ fn encode(allocator: std.mem.Allocator, iconv: c.iconv_t, string: *[]const u8) !
     var output = output_ptr;
     var output_length: usize = string.len * 4;
 
-    _ = c.iconv(iconv, @ptrCast([*c][*c]u8, &input_ptr), &input_length, @ptrCast([*c][*c]u8, &output_ptr), &output_length);
-    
+    _ = c.iconv(iconv, @as([*c][*c]u8, @ptrCast(&input_ptr)), &input_length, @as([*c][*c]u8, @ptrCast(&output_ptr)), &output_length);
+
     var index = std.mem.indexOf(u8, output, "\x00").?;
     var buff = try allocator.dupeZ(u8, output[0..index]);
     allocator.free(output);
@@ -41,6 +41,7 @@ test "encode" {
     const allocator = std.testing.allocator;
     const cd = c.iconv_open("SHIFT-JIS", "UTF-8");
     defer _ = c.iconv_close(cd);
+
     var input = "こんにちは";
     var slice: []const u8 = input[0..];
     const sjis = try encode(allocator, cd, &slice);
@@ -63,7 +64,7 @@ test "encode2" {
     const input = "こんにちは";
     var iter = (try std.unicode.Utf8View.init(input)).iterator();
     while (iter.nextCodepoint()) |cp| {
-        std.debug.print("0x{x} is {u}\n", .{cp, cp});
+        std.debug.print("0x{x} is {u}\n", .{ cp, cp });
 
         var buf: [4]u8 = undefined;
         var s = try std.fmt.bufPrintZ(&buf, "{u}", .{cp});
